@@ -1,0 +1,61 @@
+# ---------------------------------------------------------------------------
+#  SecretBeans starter rules - checking and savings exports
+#
+#  Written by Claude (Anthropic) with Edwin West, August 2026.
+#  Not an Anthropic product. See PROVENANCE.md.
+#
+#  This template has only been tried against Chase exports. Check 'fields'
+#  against your own CSV's column order before trusting anything it produces.
+# ---------------------------------------------------------------------------
+
+# Starter rules for a checking or savings export.
+#
+# Adjust 'fields' to your CSV's own column order, then add 'if' blocks below.
+# Column names in 'fields' are hledger's, not the bank's: the ones that matter are
+# date, description and amount. Name a column you do not need anything at all, or
+# leave the slot empty.
+
+skip 1
+# 'bankbalance' rather than 'balance' on purpose. hledger treats a field named
+# 'balance' as a BALANCE ASSERTION, which then fails on any transaction you
+# deliberately skip - such as the far side of an internal transfer. Naming it
+# something hledger does not recognise keeps the column and drops the assertion.
+fields  details, date, description, amount, type, bankbalance, checknumber
+date-format %-m/%-d/%Y
+currency $
+
+account1 assets:bank:CHANGEME
+
+# ---------------------------------------------------------------------
+# Categories. Later blocks win, so put general rules first and specific
+# exceptions after them.
+# ---------------------------------------------------------------------
+
+# if %description NATIONAL GRID
+#   account2 expenses:house:utilities:gas
+
+# ---------------------------------------------------------------------
+# Anything with no rule lands in expenses:unknown, which the build reports.
+# Resist the urge to add a catch-all - it hides problems rather than fixing them.
+# ---------------------------------------------------------------------
+
+# Checks cannot be identified from a description - 'CHECK 114' says nothing.
+# Send them somewhere visible instead of guessing.
+if %type CHECK_PAID
+  account2 expenses:review:check
+
+# ---------------------------------------------------------------------
+# Internal transfers - see docs/TRANSFERS.md. Keep these at the END of the file.
+#
+# A transfer between two accounts you own appears on BOTH statements. Exactly one
+# side must record it or it is counted twice, with every expense figure still
+# looking perfectly correct.
+# ---------------------------------------------------------------------
+
+# if %description Transfer (from|to) SAV.*3456
+#   account2 assets:bank:savings
+
+# A card payment is recorded from the CARD statement, which knows which card was
+# paid. Skipping it here prevents a duplicate.
+# if %description CREDIT CRD
+#   skip

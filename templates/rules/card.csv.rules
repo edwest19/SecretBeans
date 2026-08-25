@@ -1,0 +1,40 @@
+# ---------------------------------------------------------------------------
+#  SecretBeans starter rules - credit-card exports
+#
+#  Written by Claude (Anthropic) with Edwin West, August 2026.
+#  Not an Anthropic product. See PROVENANCE.md.
+#
+#  This template has only been tried against Chase exports. Check 'fields'
+#  against your own CSV's column order before trusting anything it produces.
+# ---------------------------------------------------------------------------
+
+# Starter rules for a credit-card export.
+
+skip 1
+fields  date, postdate, description, category, type, amount, memo
+date-format %-m/%-d/%Y
+currency $
+
+account1 liabilities:creditcard:CHANGEME
+
+# ---------------------------------------------------------------------
+# Categories. Later blocks win, so general first, specific after.
+# ---------------------------------------------------------------------
+
+# if %description STOP.*SHOP
+#   account2 expenses:food:groceries
+
+# Some exports HTML-escape merchant names, so '&' arrives as '&amp;'.
+# if %description STOP &amp; SHOP
+#   description STOP & SHOP
+
+# ---------------------------------------------------------------------
+# Payments to this card - see docs/TRANSFERS.md
+#
+# The payment also appears on the bank statement. The card side is the better
+# owner because it knows which card was paid, so record it here and skip it in
+# the bank's rules file.
+# ---------------------------------------------------------------------
+
+if %description Payment Thank You
+  account2 assets:bank:CHANGEME

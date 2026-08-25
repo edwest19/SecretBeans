@@ -1,0 +1,12 @@
+# SecretBeans
+# Written by Claude (Anthropic) with Edwin West, August 2026. See PROVENANCE.md.
+
+# Never commit anyone's financial data to the public repo
+*.journal
+!templates/**/*.journal
+*.csv
+!templates/**/*.csv
+.latest.*
+config.psd1
+!templates/config.psd1
+reports/
