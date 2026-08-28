@@ -10,3 +10,23 @@
 config.psd1
 !templates/config.psd1
 reports/
+
+# Build output. Release artifacts belong on the GitHub release page, not in the
+# repository - committing them makes every clone carry every past build.
+release/
+*.zip
+*.cat
+*.sha256
+
+# Code signing. metadata.json names the Azure signing endpoint, code signing
+# account and certificate profile. It belongs outside the repository entirely
+# (docs/SIGNING.md suggests C:\tools\); this is only a backstop in case a copy
+# is ever made here by accident.
+metadata.json
+*.pfx
+*.snk
+
+# Sign CLI, if anyone installs it into the repo folder by accident. It belongs
+# in C:\tools - it unpacks a whole dependency tree that is not ours to ship.
+sign.exe
+.store/

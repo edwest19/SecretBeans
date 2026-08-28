@@ -109,9 +109,16 @@ In progress:
 ```
 SecretBeans.ps1        launcher - run this
 src\                   the modules, including SbGui.ps1
+tools\                 Build-Release.ps1
 templates\             a config to copy, and starter rules per account type
 docs\                  TRANSFERS.md is worth reading before your first import
 ```
+
+## Releases
+
+Each release ships a signed catalogue covering every file, plus SHA-256 checksums.
+[docs/VERIFYING.md](docs/VERIFYING.md) explains how to check them, and [docs/SIGNING.md](docs/SIGNING.md) covers producing one — and, just as importantly,
+what a signature does and does not prove.
 
 ## Auditing it
 
