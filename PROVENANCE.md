@@ -7,7 +7,8 @@ the project before trusting it with financial records.
 ## Authorship
 
 Every file in this repository was written by **Claude, Anthropic's AI assistant**, during
-Claude Code sessions with **Edwin West** in August 2026.
+Claude Code sessions with **Edwin West** in August 2026. The README was rewritten, and this file
+updated, in a Claude chat session with Edwin West in November 2026.
 
 Claude wrote all of the code, the templates and the documentation. Edwin West set the
 requirements, made the design decisions, supplied the real financial data it was developed
@@ -44,9 +45,10 @@ that is deliberate.
 
 ## Which Claude
 
-The sessions ran on a Claude Code environment configured for the model identifier
-`claude-opus-5`. The model actually serving any given turn can differ from the configured one,
-so this is the configuration rather than a guarantee about every line.
+The August sessions ran on a Claude Code environment configured for the model identifier
+`claude-opus-5`. The November 2026 session was configured for `claude-opus-5-5`. The model
+actually serving any given turn can differ from the configured one, so this is the
+configuration rather than a guarantee about every line.
 
 ## What was tested, and how
 
@@ -120,6 +122,17 @@ Verified:
 - **hledger version behaviour.** Tested against hledger 1.51.2. The `&&` matcher used by many
   published rules files requires hledger 1.32 or newer and fails *silently* on older versions,
   so the templates avoid it.
+- **Reading the journal on a second computer.** Checked 4 November 2026 by Edwin West. A period
+  built by SecretBeans on one Windows computer, in a OneDrive folder, was read by hledger 1.51.2
+  on a second Windows computer over SSH, with a Windows PowerShell 5.1 profile pointing
+  `LEDGER_FILE` at the newest period. It found one real problem: OneDrive delivered the new
+  journal files online-only, and hledger over SSH could not open them - it reported
+  `openFile: invalid argument`. Pinning the folder and the files with `attrib +p` fixed it.
+  Whether pinning the folder alone covers periods added later has not been checked yet.
+
+  Before that, the same idea was tried on Linux: hledger 1.51.2 read a journal folder produced by
+  the build code under PowerShell 7 after it was copied elsewhere, given a path containing a
+  space, and converted to Windows (CRLF) line endings. Its reports were identical to the original.
 
 ## What has NOT been tested
 
@@ -131,11 +144,18 @@ Read this part before trusting the tool.
 - **Investment, loan, payment-app and HSA accounts are unhandled.** Those exports carry share
   quantities, principal-and-interest splits and other structures nothing here has been tried
   against.
-- **Verified on one Windows machine, not many.** Everything above was run on a single machine
-  with one locale, one hledger build, one Windows version and one display scaling. Nothing has
-  been tried on a non-English locale (where number formatting differs - a bug of exactly that
-  kind was found and fixed during development), an older Windows, a high-DPI display, or a
-  machine where hledger is installed somewhere unusual.
+- **A stray folder in the ledger root breaks carry-forward.** To find last period's rules, the
+  window takes the last folder in the ledger root in name order. A folder such as `Import` sorts
+  after `2026-10 October` and is taken instead, so the new period starts from the starter
+  templates rather than the corrected rules. Nothing in the build report says where the rules came
+  from; a sudden jump in uncategorised transactions is the only sign. Found by reading the code in
+  November 2026 and confirmed in PowerShell 7 on Linux, not on Windows. The README warns about it;
+  the code does not yet guard against it.
+- **Verified on one Windows machine, not many.** Everything above, apart from reading a journal on
+  a second computer, was run on a single machine with one locale, one hledger build, one Windows
+  version and one display scaling. Nothing has been tried on a non-English locale (where number
+  formatting differs - a bug of exactly that kind was found and fixed during development), an
+  older Windows, a high-DPI display, or a machine where hledger is installed somewhere unusual.
 
 ## Auditing this yourself
 
@@ -152,4 +172,4 @@ If a rebuild does not reproduce a journal you were given, do not trust that jour
 
 ---
 
-*Written by Claude (Anthropic) with Edwin West, August 2026.*
+*Written by Claude (Anthropic) with Edwin West, August 2026; updated November 2026.*
