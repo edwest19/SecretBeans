@@ -134,8 +134,10 @@ Verified:
   Fixed test-first. The self-check's two new checks and the changed one, run on Windows
   PowerShell 5.1.19041.7844 with hledger 1.51.2 before the fix, failed for those reasons: 15
   passed, 4 failed (the fourth, rebuild reproducibility, failed only because the check before it
-  stopped before its last rebuild). The same rule forms were checked directly with hledger 1.30.1
-  on Linux. The self-check was not run under PowerShell 7 for this change.
+  stopped before its last rebuild). After the fix, on the same machine: 19 checks passed, 0
+  failed. The same rule forms were checked directly with hledger 1.30.1 on Linux. The self-check
+  was not run under PowerShell 7 for this change, and a rule written by the window in a real
+  period has not been checked yet.
 - **hledger version behaviour.** Tested against hledger 1.51.2. The `&&` matcher used by many
   published rules files requires hledger 1.32 or newer and fails *silently* on older versions,
   so the templates avoid it.
