@@ -229,7 +229,14 @@ function Add-SbRule {
 
         Matching is on the description, escaped and anchored, because that is the one
         field every CSV has. Anchoring matters: an unanchored 'CHECK 11' would also
-        claim cheque 110 and 119.
+        claim cheque 110 and 119, and an unanchored 'PAYPAL' claimed every PayPal
+        purchase on a card (found November 2026).
+
+        The description comes from the journal, after the rules have run, but hledger
+        matches rules against the CSV's own text. Some exports, Chase's among them,
+        write '&' as '&amp;' and a rule restores it, so '&' in the pattern also matches
+        '&amp;'. A description that a rule rewrote in any other way still will not
+        match, and the build report lists it as uncategorised again.
 
         Rules go at the END of the file, which is where they win - hledger applies every
         matching block in order and the last assignment stands.
@@ -246,7 +253,7 @@ function Add-SbRule {
     }
 
     $nl      = [Environment]::NewLine
-    $pattern = ConvertTo-SbPattern -Text $Description.Trim()
+    $pattern = '^' + (ConvertTo-SbPattern -Text $Description.Trim()).Replace('&', '&(amp;)?') + '$'
     $header  = '# --- assigned in the SecretBeans window ---'
 
     $existing = ''
@@ -257,7 +264,9 @@ function Add-SbRule {
     $escapedPattern = [regex]::Escape($pattern)
     $rx = "(?m)^if %description $escapedPattern\r?\n\s+account2 .*$"
     if ($existing -match $rx) {
-        $updated = [regex]::Replace($existing, $rx, "if %description $pattern$nl  account2 $Account")
+        # '$' is special in a .NET replacement string, and every pattern ends in one.
+        $replacement = ("if %description $pattern$nl  account2 $Account").Replace('$', '$$')
+        $updated = [regex]::Replace($existing, $rx, $replacement)
         Write-SbTextFile -Path $RulesFile -Text $updated
         return 'updated'
     }

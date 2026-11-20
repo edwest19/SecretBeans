@@ -7,7 +7,8 @@ the project before trusting it with financial records.
 ## Authorship
 
 Every file in this repository was written by **Claude, Anthropic's AI assistant**, during
-Claude Code sessions with **Edwin West** in August 2026. The README was rewritten, and this file
+Claude Code sessions with **Edwin West** in August 2026. The rules the window writes were fixed in
+a Claude session with Edwin West on 20 November 2026. The README was rewritten, and this file
 updated, in a Claude chat session with Edwin West in November 2026.
 
 Claude wrote all of the code, the templates and the documentation. Edwin West set the
@@ -114,11 +115,27 @@ Verified:
   ledger in a temp folder, exercises config round-tripping, config validation, file matching,
   period creation, rebuild, `hledger check`, diagnostics, opening balances, the build report and
   rebuild reproducibility, that edited rules survive a rebuild, and that assigning a category
-  writes a rule that works and replaces rather than stacks on reassignment - then deletes it.
-  17 checks on Windows, 16 elsewhere. The GUI construction check runs only on
+  writes a rule that works and replaces rather than stacks on reassignment, claims only its own
+  description, and matches a description restored from `&amp;` - then deletes it.
+  19 checks on Windows, 18 elsewhere. The GUI construction check runs only on
   Windows and is skipped elsewhere. It found two real bugs while being
   written: a scope error in the test itself, and an opening balance formatted with the machine's
   locale, which would have written `2.000,00` on a German Windows and been unreadable by hledger.
+- **Rules written from the window, fixed November 2026.** Found on real data on 20 November
+  2026. A card purchase described only as `PAYPAL` was given a category in step 4, and the rule
+  written for it, `if %description PAYPAL`, was not anchored. It claimed every PayPal purchase on
+  the card, and because the window's rules go at the end of the file it overrode each one's own
+  rule. On the same card a rule written for a merchant whose name has an `&`, as the window
+  showed it, never matched: the CSV writes it as `&amp;`, and an earlier rule restores the `&`.
+  The window now writes `if %description ^...$`, with `&` also matching `&amp;`. Rules written
+  before the fix are left as they were; look under `# --- assigned in the SecretBeans window ---`
+  in each rules file for short ones.
+
+  Fixed test-first. The self-check's two new checks and the changed one, run on Windows
+  PowerShell 5.1.19041.7844 with hledger 1.51.2 before the fix, failed for those reasons: 15
+  passed, 4 failed (the fourth, rebuild reproducibility, failed only because the check before it
+  stopped before its last rebuild). The same rule forms were checked directly with hledger 1.30.1
+  on Linux. The self-check was not run under PowerShell 7 for this change.
 - **hledger version behaviour.** Tested against hledger 1.51.2. The `&&` matcher used by many
   published rules files requires hledger 1.32 or newer and fails *silently* on older versions,
   so the templates avoid it.
