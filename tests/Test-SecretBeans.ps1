@@ -36,6 +36,19 @@ function Step {
     }
 }
 
+# Where each description's other posting goes, from hledger's own CSV output for
+# one CSV and its rules file. The account1 side, under liabilities:, is left out.
+function Get-TestCategories {
+    param([string]$Csv, [string]$Rules)
+    $res = Invoke-SbHledger -Hledger (Get-SbHledger) -Arguments @('print','-f',$Csv,'--rules',$Rules,'-O','csv')
+    if ($res.ExitCode -ne 0) { throw "hledger failed: $($res.Text)" }
+    $map = @{}
+    foreach ($row in (($res.Text -split "\r?\n") | ConvertFrom-Csv)) {
+        if ($row.account -notlike 'liabilities:*') { $map[$row.description] = $row.account }
+    }
+    return $map
+}
+
 Write-Host ""
 Write-Host "SecretBeans self-check" -ForegroundColor Cyan
 Write-Host "---------------------"
@@ -248,6 +261,7 @@ try {
     # Step 4 lets you type a category beside anything the rules could not identify and
     # have the rule written for you. Assigning twice must replace, not stack - two
     # contradictory rules for one description would be decided silently by file order.
+    # The rule is anchored (^...$), so it is counted in that form.
     Step "assigning a category writes a working rule" {
         $rf = Join-Path $script:period.RulesDir 'test.csv.rules'
         $b  = Invoke-SbRebuild -Period $script:period -Config $cfg
@@ -263,13 +277,87 @@ try {
         $r2 = Add-SbRule -RulesFile $rf -Description $item.Description -Account 'expenses:house:misc'
         if ($r2 -ne 'updated') { throw "assigning a second time should replace the rule, but returned '$r2'" }
         $text = Get-Content -LiteralPath $rf -Raw
-        $rx = '(?m)^if %description ' + [regex]::Escape($item.Description.Trim()) + '\s*$'
+        $rx = '(?m)^if %description \^' + [regex]::Escape($item.Description.Trim()) + '\$\s*$'
         $count = ([regex]::Matches($text, $rx)).Count
         if ($count -ne 1) { throw "expected exactly one rule for that description, found $count" }
 
         $final = Invoke-SbRebuild -Period $script:period -Config $cfg
         if (-not $final.Diagnostics.CheckPassed) { throw 'the journal stopped balancing after reassignment' }
         'rule added, then replaced rather than stacked'
+    }
+
+    # A rule written in step 4 must claim only the transaction it was written for.
+    # Found in November 2026: a card purchase described only as 'PAYPAL' was given a
+    # category, and the rule written for it, unanchored, claimed every PayPal purchase
+    # on the card. These rules go at the end of the file, where they win, so it
+    # overrode the card's own rule for each of them.
+    Step "an assigned rule claims only its own description" {
+        $dir = Join-Path $tmp 'assigned-anchor'
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        $csv = Join-Path $dir 'card.csv'
+        $rf  = Join-Path $dir 'card.csv.rules'
+        Write-SbTextFile -Path $csv -Text (@(
+            'Transaction Date,Post Date,Description,Category,Type,Amount,Memo'
+            '7/10/2026,7/11/2026,PAYPAL *ACME PETS,Shopping,Sale,-25.00,'
+            '7/12/2026,7/13/2026,PAYPAL,Shopping,Sale,-40.00,'
+        ) -join [Environment]::NewLine)
+        Write-SbTextFile -Path $rf -Text (@(
+            'skip 1'
+            'fields date, postdate, description, category, type, amount, memo'
+            'date-format %-m/%-d/%Y'
+            'currency $'
+            'account1 liabilities:creditcard:test'
+            ''
+            'if %description PAYPAL \*ACME PETS'
+            '  account2 expenses:pets:food'
+        ) -join [Environment]::NewLine)
+
+        $null = Add-SbRule -RulesFile $rf -Description 'PAYPAL' -Account 'expenses:clothes'
+        $to = Get-TestCategories -Csv $csv -Rules $rf
+        if ($to['PAYPAL'] -ne 'expenses:clothes') {
+            throw "the purchase described 'PAYPAL' went to '$($to['PAYPAL'])', not expenses:clothes"
+        }
+        if ($to['PAYPAL *ACME PETS'] -ne 'expenses:pets:food') {
+            throw "the rule written for 'PAYPAL' also claimed 'PAYPAL *ACME PETS', which went to '$($to['PAYPAL *ACME PETS'])'"
+        }
+        "'PAYPAL' to expenses:clothes; 'PAYPAL *ACME PETS' keeps its own rule"
+    }
+
+    # The window shows a description as the rules left it, but hledger matches rules
+    # against the CSV's own text. Chase writes '&' as '&amp;' and a rule restores it,
+    # so a rule written from the window for 'A&B ...' never matched the CSV's
+    # 'A&amp;B ...'. Found in November 2026.
+    Step "an assigned rule matches a description restored from &amp;" {
+        $dir = Join-Path $tmp 'assigned-amp'
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        $csv = Join-Path $dir 'card.csv'
+        $rf  = Join-Path $dir 'card.csv.rules'
+        Write-SbTextFile -Path $csv -Text (@(
+            'Transaction Date,Post Date,Description,Category,Type,Amount,Memo'
+            '7/15/2026,7/16/2026,A&amp;B CAMERA 555-0100,Shopping,Sale,-12.34,'
+        ) -join [Environment]::NewLine)
+        Write-SbTextFile -Path $rf -Text (@(
+            'skip 1'
+            'fields date, postdate, description, category, type, amount, memo'
+            'date-format %-m/%-d/%Y'
+            'currency $'
+            'account1 liabilities:creditcard:test'
+            ''
+            'if %description A&amp;B CAMERA 555-0100'
+            '  description A&B CAMERA 555-0100'
+        ) -join [Environment]::NewLine)
+
+        $shown = 'A&B CAMERA 555-0100'
+        $before = Get-TestCategories -Csv $csv -Rules $rf
+        if ($before[$shown] -notlike '*unknown*') {
+            throw "expected '$shown' to be uncategorised before a category was chosen, but it went to '$($before[$shown])'"
+        }
+        $null = Add-SbRule -RulesFile $rf -Description $shown -Account 'expenses:house'
+        $to = Get-TestCategories -Csv $csv -Rules $rf
+        if ($to[$shown] -ne 'expenses:house') {
+            throw "the rule written for '$shown' did not match the CSV's 'A&amp;B': it went to '$($to[$shown])'"
+        }
+        "'A&amp;B' in the CSV matched the rule written for '$shown'"
     }
 
     Step "rebuild is reproducible" {
