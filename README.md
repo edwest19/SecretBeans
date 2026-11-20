@@ -57,7 +57,7 @@ came from the publisher unchanged, follow [docs/VERIFYING.md](docs/VERIFYING.md)
 powershell -ExecutionPolicy Bypass -File tests\Test-SecretBeans.ps1
 ```
 
-This builds a small made-up ledger in a temporary folder, runs its checks (17 on Windows; the
+This builds a small made-up ledger in a temporary folder, runs its checks (19 on Windows; the
 check that builds the window only runs on Windows), and deletes it. It never touches your data
 and needs no configuration.
 
@@ -117,7 +117,7 @@ Both are optional. Without `-ConfigPath`, SecretBeans looks for `config.psd1` be
    | 1. Where things are | Confirm the configuration file, the ledger root and the downloads folder. |
    | 2. Matches | Check which download it matched to which account. **Every account should say `Ok`.** An account marked `Missing` is left out of this period's journal, but any opening balance it has stays in, so its balance will be wrong. `Ambiguous` means more than one download matched; it used the newest. |
    | 3. Opening balances | What each account held just before the earliest transaction, from a statement. It fills in last period's figures, which are still right only if your downloads start on the same date as last time. |
-   | 4. Build | Name the period (it suggests the current month, e.g. `2026-11 November`) and build. **Read the report: uncategorised, awaiting review, and possible duplicates.** Type a category beside anything it could not place and it writes the rule for you. Edit rules, build again, repeat until it is right. |
+   | 4. Build | Name the period (it suggests the current month, e.g. `2026-11 November`) and build. **Read the report: uncategorised, awaiting review, and possible duplicates.** Type a category beside anything it could not place and it writes the rule for you. The rule matches that description exactly (`if %description ^...$`), so it claims nothing else. Edit rules, build again, repeat until it is right. |
    | 5. Done | Shows where the journal is and the hledger command to report on it. |
 
 Step 4 is the point of the whole thing. Because every build starts from the CSVs, you can keep
